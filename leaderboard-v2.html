@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wodyat — Leaderboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+
+/* ═══════════════════════════════════════
+   TOKENS — PURE BLACK & WHITE
+═══════════════════════════════════════ */
+:root {
+  --bg:       #000;
+  --bg2:      #0d0d0d;
+  --bg3:      #141414;
+  --bg4:      #1a1a1a;
+
+  --line:     rgba(255,255,255,0.08);
+  --line2:    rgba(255,255,255,0.14);
+  --line3:    rgba(255,255,255,0.22);
+
+  --white:    #ffffff;
+  --grey1:    #aaaaaa;
+  --grey2:    #666666;
+  --grey3:    #333333;
+
+  --ease:   cubic-bezier(.4,0,.2,1);
+  --spring: cubic-bezier(.34,1.56,.64,1);
+
+  --topbar-logo-h: 36px;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* subtle grain */
+body::before {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+}
+
+.z { position:relative; z-index:1; }
+
+/* ═══════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════ */
+.topbar {
+  position:sticky; top:0; z-index:200;
+  border-bottom:1px solid var(--line);
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(20px);
+}
+.topbar-inner {
+  max-width:1160px; margin:0 auto; padding:0 36px;
+  height:58px; display:flex; align-items:center; justify-content:space-between;
+}
+
+.brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
+
+/* fallback hexagon mark */
+.brand-mark {
+  width:30px; height:30px; flex-shrink:0;
+  background:var(--white);
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  display:flex; align-items:center; justify-content:center;
+}
+.brand-mark svg { width:13px; height:13px; fill:#000; }
+
+.brand-logo {
+  height:var(--topbar-logo-h); width:auto; max-width:180px;
+  object-fit:contain; display:block;
+}
+
+.topbar-right { display:flex; align-items:center; gap:6px; }
+
+.chip {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 12px; border:1px solid var(--line2);
+  font-size:10px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--grey1); background:transparent;
+  font-family:'DM Sans',sans-serif; cursor:pointer;
+  transition: all .16s var(--ease);
+}
+.chip:hover { border-color:var(--line3); color:var(--white); }
+.chip.active { background:var(--white); border-color:var(--white); color:#000; }
+.chip.danger { color:#ff4455; border-color:rgba(255,68,85,.3); }
+.chip.danger:hover { background:rgba(255,68,85,.08); border-color:rgba(255,68,85,.5); }
+
+.live-dot {
+  width:5px; height:5px; border-radius:50%;
+  background:var(--white);
+  box-shadow:0 0 0 2px rgba(255,255,255,.2);
+  animation:blink 2.4s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
+
+/* ═══════════════════════════════════════
+   ADMIN BAR
+═══════════════════════════════════════ */
+.admin-bar {
+  border-bottom:1px solid var(--line);
+  background: var(--bg2);
+  overflow:hidden;
+  max-height:0; opacity:0;
+  transition: max-height .4s var(--ease), opacity .3s var(--ease);
+}
+.admin-bar.open { max-height:240px; opacity:1; }
+
+.admin-bar-inner {
+  max-width:1160px; margin:0 auto; padding:16px 36px;
+  display:flex; flex-direction:column; gap:12px;
+}
+
+.admin-section-label {
+  font-size:9px; font-weight:600; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--grey2); margin-bottom:2px;
+}
+
+.admin-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+
+.afield { display:flex; align-items:center; gap:8px; flex:1; min-width:200px; }
+.afield label {
+  font-size:10px; font-weight:500; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--grey2); white-space:nowrap; flex-shrink:0;
+}
+.ainput {
+  flex:1; background:var(--bg3); border:1px solid var(--line);
+  color:var(--white); font-family:'DM Sans',sans-serif;
+  font-size:12px; padding:7px 10px; outline:none;
+  transition:border-color .15s;
+}
+.ainput:focus { border-color:var(--line3); }
+.ainput::placeholder { color:var(--grey3); }
+
+input[type=range].slider {
+  -webkit-appearance:none; appearance:none;
+  width:90px; height:2px; background:var(--line2);
+  outline:none; cursor:pointer;
+}
+input[type=range].slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:14px; height:14px;
+  border-radius:50%; background:var(--white); cursor:pointer;
+  box-shadow:0 0 0 3px rgba(255,255,255,.15);
+}
+.slider-val { font-size:11px; color:var(--grey2); min-width:32px; text-align:right; }
+
+.btn-save {
+  padding:7px 18px; background:var(--white); color:#000; border:none;
+  font-family:'DM Sans',sans-serif; font-size:10px; font-weight:700;
+  letter-spacing:.14em; text-transform:uppercase; cursor:pointer;
+  transition:opacity .15s; flex-shrink:0;
+}
+.btn-save:hover { opacity:.8; }
+
+/* ═══════════════════════════════════════
+   PAGE WRAP
+═══════════════════════════════════════ */
+.wrap { max-width:1160px; margin:0 auto; padding:56px 36px 100px; }
+
+/* ═══════════════════════════════════════
+   SECTION LABEL
+═══════════════════════════════════════ */
+.sec-label {
+  font-size:9px; font-weight:600; letter-spacing:.3em; text-transform:uppercase;
+  color:var(--grey2); margin-bottom:20px;
+  display:flex; align-items:center; gap:14px;
+}
+.sec-label::after { content:''; flex:1; height:1px; background:var(--line); }
+
+/* ═══════════════════════════════════════
+   LEAGUE GRID — bold horizontal rows
+═══════════════════════════════════════ */
+#leagueGrid {
+  display:flex; flex-direction:column; gap:2px;
+  margin-bottom:64px;
+}
+
+.league-card {
+  display:flex; align-items:center; gap:20px;
+  padding:18px 24px;
+  background:var(--bg2); border:1px solid var(--line);
+  cursor:pointer; outline:none; text-align:left;
+  position:relative; overflow:hidden;
+  transition: background .18s var(--ease), border-color .18s var(--ease);
+}
+.league-card::before {
+  content:''; position:absolute; left:0; top:0; bottom:0;
+  width:3px; background:var(--white);
+  transform:scaleY(0); transform-origin:bottom;
+  transition:transform .22s var(--ease);
+}
+.league-card:hover { background:var(--bg3); border-color:var(--line2); }
+.league-card:hover::before { transform:scaleY(1); }
+.league-card.active { background:var(--bg3); border-color:var(--line2); }
+.league-card.active::before { transform:scaleY(1); }
+
+/* logo circle */
+.lc-logo {
+  border-radius:50%; background:var(--bg4); border:1px solid var(--line2);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; flex-shrink:0;
+  width:52px; height:52px;
+}
+.lc-logo img { width:100%; height:100%; object-fit:cover; display:block; }
+.lc-init {
+  font-family:'Syne',sans-serif; font-weight:700; font-size:15px;
+  color:var(--grey2); text-transform:uppercase;
+}
+
+/* info */
+.lc-info { flex:1; min-width:0; }
+.lc-name {
+  font-family:'Syne',sans-serif; font-weight:800; font-size:17px;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--white);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.lc-meta { font-size:11px; color:var(--grey2); margin-top:3px; letter-spacing:.06em; }
+
+/* right arrow */
+.lc-arrow {
+  font-size:18px; color:var(--grey3);
+  transition:color .18s, transform .18s var(--ease);
+  flex-shrink:0;
+}
+.league-card:hover .lc-arrow,
+.league-card.active .lc-arrow { color:var(--white); transform:translateX(4px); }
+
+/* active badge */
+.lc-badge {
+  font-size:8px; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+  background:var(--white); color:#000;
+  padding:3px 8px; flex-shrink:0;
+  opacity:0; transition:opacity .18s;
+}
+.league-card.active .lc-badge { opacity:1; }
+
+/* skeleton */
+.lc-skel {
+  height:88px; background:var(--bg2); border:1px solid var(--line);
+  animation:skelPulse 1.6s ease-in-out infinite;
+}
+@keyframes skelPulse { 0%,100%{opacity:.3} 50%{opacity:.6} }
+
+/* empty */
+.empty {
+  padding:80px 24px; text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+}
+.empty-t {
+  font-family:'Syne',sans-serif; font-weight:800; font-size:22px;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--grey3);
+}
+.empty-s { font-size:11px; color:var(--grey2); letter-spacing:.1em; }
+
+/* ═══════════════════════════════════════
+   BOARD PANEL
+═══════════════════════════════════════ */
+#boardPanel {
+  opacity:0; transform:translateY(12px);
+  transition:opacity .35s var(--ease), transform .35s var(--ease);
+  pointer-events:none;
+}
+#boardPanel.visible { opacity:1; transform:translateY(0); pointer-events:all; }
+
+/* ═══════════════════════════════════════
+   LEAGUE HERO
+═══════════════════════════════════════ */
+.lhero {
+  display:flex; align-items:center; gap:28px;
+  padding:36px 0 36px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:0;
+}
+.lhero-logo {
+  border-radius:50%; background:var(--bg3); border:1px solid var(--line2);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; flex-shrink:0;
+}
+.lhero-logo img { width:100%; height:100%; object-fit:cover; display:block; }
+.lhero-init {
+  font-family:'Syne',sans-serif; font-weight:700; color:var(--grey2);
+  text-transform:uppercase;
+}
+.lhero-info { flex:1; }
+.lhero-eyebrow {
+  font-size:9px; font-weight:600; letter-spacing:.28em; text-transform:uppercase;
+  color:var(--grey2); margin-bottom:8px;
+}
+.lhero-name {
+  font-family:'Syne',sans-serif; font-weight:800;
+  font-size:clamp(30px,5vw,56px); letter-spacing:.02em;
+  line-height:1; text-transform:uppercase; color:var(--white);
+}
+.lhero-meta {
+  font-size:11px; color:var(--grey2);
+  letter-spacing:.12em; text-transform:uppercase; margin-top:10px;
+}
+.lhero-meta strong { color:var(--white); font-weight:600; }
+
+/* ═══════════════════════════════════════
+   STAT STRIP
+═══════════════════════════════════════ */
+.stats {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  border-left:1px solid var(--line);
+  margin:0 0 32px;
+}
+.stat {
+  padding:24px 28px;
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.stat-l {
+  font-size:9px; font-weight:600; letter-spacing:.24em; text-transform:uppercase;
+  color:var(--grey2); margin-bottom:8px;
+}
+.stat-v {
+  font-family:'Syne',sans-serif; font-weight:800; font-size:38px;
+  letter-spacing:.01em; color:var(--white);
+}
+
+/* ═══════════════════════════════════════
+   TABLE
+═══════════════════════════════════════ */
+.tbl {
+  border:1px solid var(--line);
+  overflow:hidden;
+}
+
+.th-row {
+  display:grid; grid-template-columns: 56px 1fr 110px 80px 110px;
+  padding:10px 24px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--line);
+}
+.th {
+  font-size:9px; font-weight:600; letter-spacing:.24em; text-transform:uppercase;
+  color:var(--grey2);
+}
+.th.r { text-align:right; }
+
+.trow {
+  display:grid; grid-template-columns: 56px 1fr 110px 80px 110px;
+  padding:16px 24px; border-bottom:1px solid var(--line);
+  align-items:center;
+  transition:background .14s var(--ease);
+  animation:rowIn .3s var(--ease) both;
+}
+.trow:last-child { border-bottom:none; }
+.trow:hover { background:var(--bg2); }
+
+@keyframes rowIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:none} }
+
+/* top 3 left border */
+.trow.p1 { border-left:3px solid #fff; }
+.trow.p2 { border-left:3px solid #888; }
+.trow.p3 { border-left:3px solid #444; }
+
+.rank {
+  font-family:'Syne',sans-serif; font-weight:800; font-size:20px;
+  color:var(--grey3);
+}
+.rank.p1 { color:var(--white); }
+.rank.p2 { color:var(--grey1); }
+.rank.p3 { color:var(--grey2); }
+
+.pcell { display:flex; align-items:center; gap:12px; }
+
+.av {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:var(--bg3); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.av-init {
+  font-family:'Syne',sans-serif; font-weight:700; font-size:12px;
+  color:var(--grey2); text-transform:uppercase;
+}
+.av img { width:100%; height:100%; object-fit:cover; display:block; }
+
+.pname { font-size:14px; font-weight:500; color:var(--white); line-height:1; }
+.pid   { font-size:9px; color:var(--grey3); margin-top:3px; letter-spacing:.04em; }
+
+.num { text-align:right; font-size:13px; color:var(--grey2); }
+.num.pts {
+  font-family:'Syne',sans-serif; font-weight:800; font-size:18px;
+  color:var(--white);
+}
+.num.wins { color:var(--grey1); }
+
+/* skeleton rows */
+.sk-row {
+  display:grid; grid-template-columns: 56px 1fr 110px 80px 110px;
+  padding:16px 24px; border-bottom:1px solid var(--line); align-items:center;
+}
+.sk { background:var(--bg3); position:relative; overflow:hidden; }
+.sk::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.04),transparent);
+  background-size:200% 100%;
+  animation:shimmer 1.6s ease-in-out infinite;
+}
+@keyframes shimmer { from{background-position:200% 0} to{background-position:-200% 0} }
+.sk-rk { width:22px; height:20px; }
+.sk-av { width:36px; height:36px; border-radius:50%; }
+.sk-nm { width:48%; height:13px; }
+.sk-n  { width:38px; height:13px; margin-left:auto; }
+
+/* timestamp */
+.ts {
+  text-align:right; margin-top:12px;
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--grey3);
+}
+
+/* ═══════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════ */
+.foot {
+  border-top:1px solid var(--line); padding:22px 36px;
+}
+.foot-inner {
+  max-width:1160px; margin:0 auto;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+.foot-t {
+  font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--grey3);
+}
+
+/* ═══════════════════════════════════════
+   MODAL
+═══════════════════════════════════════ */
+.overlay {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(0,0,0,.85); backdrop-filter:blur(16px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity .22s var(--ease);
+}
+.overlay.open { opacity:1; pointer-events:all; }
+
+.modal {
+  background:var(--bg2); border:1px solid var(--line2);
+  padding:40px 36px; width:360px;
+  transform:translateY(14px) scale(.97);
+  transition:transform .28s var(--spring);
+  box-shadow:0 40px 100px rgba(0,0,0,.8);
+}
+.overlay.open .modal { transform:translateY(0) scale(1); }
+
+.modal-title {
+  font-family:'Syne',sans-serif; font-weight:800; font-size:28px;
+  letter-spacing:.05em; text-transform:uppercase; margin-bottom:4px;
+}
+.modal-sub { font-size:11px; color:var(--grey2); margin-bottom:24px; letter-spacing:.04em; }
+
+.minput {
+  width:100%; background:var(--bg3); border:1px solid var(--line);
+  color:var(--white); font-family:'DM Sans',sans-serif;
+  font-size:13px; padding:12px 14px; outline:none; margin-bottom:14px;
+  transition:border-color .15s;
+}
+.minput:focus { border-color:var(--line3); }
+
+.modal-btns { display:flex; gap:8px; margin-top:4px; }
+.btn-prim {
+  flex:1; background:var(--white); color:#000; border:none;
+  font-family:'DM Sans',sans-serif; font-size:11px; font-weight:700;
+  letter-spacing:.14em; text-transform:uppercase; padding:12px;
+  cursor:pointer; transition:opacity .15s;
+}
+.btn-prim:hover { opacity:.85; }
+.btn-sec {
+  padding:12px 18px; background:transparent; color:var(--grey1);
+  border:1px solid var(--line2); cursor:pointer;
+  font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500;
+  letter-spacing:.14em; text-transform:uppercase;
+  transition:all .15s;
+}
+.btn-sec:hover { color:var(--white); border-color:var(--line3); }
+
+.err { font-size:10px; color:#ff4455; margin-bottom:10px; display:none; letter-spacing:.06em; }
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+@media(max-width:700px){
+  .topbar-inner,.wrap,.foot { padding-left:18px; padding-right:18px; }
+  .admin-bar-inner { padding-left:18px; padding-right:18px; }
+  .th-row,.trow { grid-template-columns:44px 1fr 90px; }
+  .th-row .th:nth-child(4),.th-row .th:nth-child(5),
+  .trow .num:nth-child(4),.trow .num:nth-child(5) { display:none; }
+  .sk-row { grid-template-columns:44px 1fr 90px; }
+  .sk-row .sk:nth-child(4),.sk-row .sk:nth-child(5) { display:none; }
+  .stats { grid-template-columns:1fr 1fr; }
+  .stat:last-child { grid-column:1/-1; }
+  .lhero { flex-wrap:wrap; gap:16px; }
+  .league-card { padding:14px 16px; gap:14px; }
+  .lc-logo { width:42px; height:42px; }
+  .lc-name { font-size:14px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-title">Admin</div>
+    <div class="modal-sub">Enter password to access controls</div>
+    <input class="minput" type="password" id="adminPw" placeholder="Password">
+    <div class="err" id="loginErr">Incorrect password</div>
+    <div class="modal-btns">
+      <button class="btn-prim" onclick="doLogin()">Login</button>
+      <button class="btn-sec"  onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="z">
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <img id="topbarLogo" class="brand-logo" src="" alt="" style="display:none;">
+      <div class="brand-mark" id="topbarFallback">
+        <svg viewBox="0 0 16 16"><path d="M8 1L15 4.5V11.5L8 15L1 11.5V4.5L8 1Z"/></svg>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="chip" style="cursor:default;pointer-events:none">
+        <div class="live-dot"></div>
+        Live
+      </div>
+      <button class="chip" id="adminBtn" onclick="openModal()">Admin</button>
+      <button class="chip danger" id="logoutBtn" style="display:none" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ADMIN BAR -->
+<div class="admin-bar" id="adminBar">
+  <div class="admin-bar-inner">
+
+    <div class="admin-section-label">Global Settings</div>
+    <div class="admin-row">
+      <div class="afield">
+        <label>Site Logo URL</label>
+        <input class="ainput" id="gLogoUrl" type="text" placeholder="https://...">
+      </div>
+      <div class="afield" style="flex:0 0 auto;gap:10px;">
+        <label>Size</label>
+        <input class="slider" type="range" id="gLogoSize" min="20" max="120" value="36"
+          oninput="document.getElementById('gSizeVal').textContent=this.value+'px'; document.documentElement.style.setProperty('--topbar-logo-h', this.value+'px')">
+        <span class="slider-val" id="gSizeVal">36px</span>
+      </div>
+      <button class="btn-save" onclick="saveGlobal()">Save</button>
+    </div>
+
+    <div id="leagueAdminRow" style="display:none">
+      <div class="admin-section-label" style="margin-top:8px">
+        League — <span id="adminLeagueName" style="text-transform:uppercase;color:var(--grey1)"></span>
+      </div>
+      <div class="admin-row">
+        <div class="afield">
+          <label>Display Name</label>
+          <input class="ainput" id="lName" type="text" placeholder="League name">
+        </div>
+        <div class="afield">
+          <label>Logo URL</label>
+          <input class="ainput" id="lLogoUrl" type="text" placeholder="https://...">
+        </div>
+        <div class="afield" style="flex:0 0 auto;gap:10px;">
+          <label>Size</label>
+          <input class="slider" type="range" id="lLogoSize" min="30" max="120" value="60"
+            oninput="document.getElementById('lSizeVal').textContent=this.value+'px'">
+          <span class="slider-val" id="lSizeVal">60px</span>
+        </div>
+        <button class="btn-save" onclick="saveLeague()">Save</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MAIN -->
+<main class="wrap z">
+
+  <div class="sec-label">Select League</div>
+  <div id="leagueGrid"></div>
+
+  <!-- BOARD -->
+  <div id="boardPanel">
+
+    <div class="lhero">
+      <div class="lhero-logo" id="heroLogo">
+        <span class="lhero-init" id="heroInit">?</span>
+      </div>
+      <div class="lhero-info">
+        <div class="lhero-eyebrow">Active League</div>
+        <div class="lhero-name" id="heroName">—</div>
+        <div class="lhero-meta" id="heroMeta">—</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-l">Players</div>
+        <div class="stat-v" id="sv-p">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-l">Matches</div>
+        <div class="stat-v" id="sv-m">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-l">Top Score</div>
+        <div class="stat-v" id="sv-t">—</div>
+      </div>
+    </div>
+
+    <div class="sec-label" style="margin-bottom:0">Standings</div>
+
+    <div class="tbl">
+      <div class="th-row">
+        <div class="th">#</div>
+        <div class="th">Player</div>
+        <div class="th r">Points</div>
+        <div class="th r">Wins</div>
+        <div class="th r">Matches</div>
+      </div>
+      <div id="list"></div>
+    </div>
+
+    <div class="ts" id="ts">—</div>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="foot z">
+  <div class="foot-inner">
+    <span class="foot-t">Wodyat — Global Leaderboard</span>
+    <span class="foot-t" id="footDate">—</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════════ */
+const BIN_ID   = "69e384bc856a6821894966bc";
+const API_KEY  = "$2a$10$cBWEEkarc94EGoG/iG9AROsEfgwtnGJq.SoIUNH0YKNOzlerJzvam";
+const BIN_URL  = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const ADMIN_PW = "admin123";
+
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+let db = { players:[], logo:"", logoSize:36, leagueLogos:{}, leagueLogoSizes:{}, leagueNames:{} };
+let leagues  = [];
+let activeId = null;
+let isAdmin  = false;
+
+/* ══════════════════════════════════════════════
+   TOPBAR LOGO
+══════════════════════════════════════════════ */
+function updateTopbarLogo(url, size) {
+  const img      = document.getElementById("topbarLogo");
+  const fallback = document.getElementById("topbarFallback");
+  if (size) document.documentElement.style.setProperty("--topbar-logo-h", size + "px");
+  if (url) {
+    img.src = url;
+    img.style.display = "block";
+    fallback.style.display = "none";
+    img.onerror = () => { img.style.display="none"; fallback.style.display="flex"; };
+  } else {
+    img.style.display      = "none";
+    fallback.style.display = "flex";
+  }
+}
+
+/* ══════════════════════════════════════════════
+   API
+══════════════════════════════════════════════ */
+async function fetchDB() {
+  try {
+    const res  = await fetch(`${BIN_URL}/latest`, { headers:{"X-Master-Key":API_KEY} });
+    if (!res.ok) throw new Error();
+    const json = await res.json();
+    db = Object.assign({ players:[], logo:"", logoSize:36, leagueLogos:{}, leagueLogoSizes:{}, leagueNames:{} }, json.record);
+    updateTopbarLogo(db.logo, db.logoSize);
+    buildLeagues();
+    renderGrid();
+    if (activeId && leagues.find(l=>l.id===activeId)) renderBoard(activeId);
+  } catch {
+    document.getElementById("leagueGrid").innerHTML =
+      `<div style="padding:60px;text-align:center;font-size:11px;letter-spacing:.14em;color:var(--grey2)">Connection error — retrying</div>`;
+  }
+}
+
+async function writeDB() {
+  await fetch(BIN_URL, {
+    method:"PUT",
+    headers:{"Content-Type":"application/json","X-Master-Key":API_KEY},
+    body: JSON.stringify(db)
+  });
+}
+
+/* ══════════════════════════════════════════════
+   BUILD LEAGUES
+══════════════════════════════════════════════ */
+function buildLeagues() {
+  const map = new Map();
+  for (const p of db.players) {
+    if (!p.guildId) continue;
+    if (!map.has(p.guildId)) map.set(p.guildId, { id:p.guildId, rawName:p.guildName||p.guildId, count:0 });
+    map.get(p.guildId).count++;
+  }
+  leagues = [...map.values()].sort((a,b)=>b.count-a.count);
+}
+
+/* ══════════════════════════════════════════════
+   RENDER GRID
+══════════════════════════════════════════════ */
+function renderGrid() {
+  const el = document.getElementById("leagueGrid");
+  if (!leagues.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-t">No Leagues Yet</div>
+      <div class="empty-s">Players with a guildId will appear here</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = leagues.map(l => {
+    const displayName = db.leagueNames[l.id] || l.rawName;
+    const logo  = db.leagueLogos[l.id] || "";
+    const init  = displayName.slice(0,2).toUpperCase();
+    const active = l.id === activeId ? "active" : "";
+
+    const logoHtml = logo
+      ? `<img src="${esc(logo)}" alt=""
+            onerror="this.parentElement.innerHTML='<span class=lc-init>${init}</span>'">`
+      : `<span class="lc-init">${init}</span>`;
+
+    return `<button class="league-card ${active}" onclick="selectLeague('${esc(l.id)}')" title="${esc(displayName)}">
+      <div class="lc-logo">${logoHtml}</div>
+      <div class="lc-info">
+        <div class="lc-name">${esc(displayName)}</div>
+        <div class="lc-meta">${l.count} player${l.count!==1?'s':''}</div>
+      </div>
+      <span class="lc-badge">Active</span>
+      <span class="lc-arrow">→</span>
+    </button>`;
+  }).join("");
+}
+
+function renderGridSkeleton() {
+  document.getElementById("leagueGrid").innerHTML =
+    Array.from({length:3}, () => `<div class="lc-skel"></div>`).join("");
+}
+
+/* ══════════════════════════════════════════════
+   SELECT LEAGUE
+══════════════════════════════════════════════ */
+function selectLeague(id) {
+  activeId = id;
+  renderGrid();
+  if (isAdmin) showLeagueAdmin(id);
+  renderBoard(id);
+}
+
+/* ══════════════════════════════════════════════
+   RENDER BOARD
+══════════════════════════════════════════════ */
+function renderBoard(guildId) {
+  const panel = document.getElementById("boardPanel");
+  panel.classList.add("visible");
+
+  const l           = leagues.find(x=>x.id===guildId);
+  const displayName = db.leagueNames[guildId] || (l ? l.rawName : guildId);
+  const init        = displayName.slice(0,2).toUpperCase();
+  const logo        = db.leagueLogos[guildId] || db.logo || "";
+  const logoSz      = db.leagueLogoSizes[guildId] || db.logoSize || 64;
+
+  const heroLogo = document.getElementById("heroLogo");
+  heroLogo.style.width  = logoSz + "px";
+  heroLogo.style.height = logoSz + "px";
+  if (logo) {
+    const img = document.createElement("img");
+    img.src = logo; img.alt = "";
+    img.style.cssText = "width:100%;height:100%;object-fit:cover;display:block";
+    img.onerror = () => { heroLogo.innerHTML = `<span class="lhero-init" style="font-size:${Math.round(logoSz*.3)}px">${init}</span>`; };
+    heroLogo.innerHTML = ""; heroLogo.appendChild(img);
+  } else {
+    heroLogo.innerHTML = `<span class="lhero-init" style="font-size:${Math.round(logoSz*.3)}px">${init}</span>`;
+  }
+
+  document.getElementById("heroName").textContent = displayName;
+  document.getElementById("heroInit").textContent  = init;
+
+  const players = db.players.filter(p=>p.guildId===guildId).sort((a,b)=>b.points-a.points);
+  const totalM  = Math.floor(players.reduce((s,p)=>s+(p.matches||0),0)/2);
+
+  document.getElementById("heroMeta").innerHTML =
+    `<strong>${players.length}</strong> players &nbsp;&middot;&nbsp; <strong>${totalM}</strong> matches`;
+  document.getElementById("sv-p").textContent = players.length;
+  document.getElementById("sv-m").textContent = totalM;
+  document.getElementById("sv-t").textContent = players[0]?.points ?? 0;
+
+  const list = document.getElementById("list");
+  if (!players.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-t">No Players Yet</div><div class="empty-s">Matches will populate this board</div></div>`;
+    document.getElementById("ts").textContent = "";
+    return;
+  }
+
+  list.innerHTML = players.map((p,i) => {
+    const rank  = i+1;
+    const pc    = rank<=3 ? `p${rank}` : "";
+    const init2 = (p.displayName||"?").slice(0,2).toUpperCase();
+    return `<div class="trow ${pc}" style="animation-delay:${(i*.038).toFixed(3)}s">
+      <div class="rank ${pc}">${rank}</div>
+      <div class="pcell">
+        <div class="av"><span class="av-init">${init2}</span></div>
+        <div>
+          <div class="pname">${esc(p.displayName||"Unknown")}</div>
+          <div class="pid">${esc(p.userId)}</div>
+        </div>
+      </div>
+      <div class="num pts">${p.points??0}</div>
+      <div class="num wins">${p.wins??0}</div>
+      <div class="num">${p.matches??0}</div>
+    </div>`;
+  }).join("");
+
+  const now = new Date();
+  document.getElementById("ts").textContent =
+    "Updated " + now.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  document.getElementById("footDate").textContent =
+    now.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+
+  setTimeout(() => panel.scrollIntoView({behavior:"smooth",block:"nearest"}), 80);
+}
+
+/* ══════════════════════════════════════════════
+   ADMIN — MODAL
+══════════════════════════════════════════════ */
+function openModal() {
+  document.getElementById("overlay").classList.add("open");
+  setTimeout(() => document.getElementById("adminPw").focus(), 60);
+}
+function closeModal() {
+  document.getElementById("overlay").classList.remove("open");
+  document.getElementById("adminPw").value = "";
+  document.getElementById("loginErr").style.display = "none";
+}
+function doLogin() {
+  if (document.getElementById("adminPw").value === ADMIN_PW) {
+    isAdmin = true; closeModal();
+    document.getElementById("adminBar").classList.add("open");
+    document.getElementById("adminBtn").style.display = "none";
+    document.getElementById("logoutBtn").style.display = "";
+    document.getElementById("gLogoUrl").value  = db.logo||"";
+    document.getElementById("gLogoSize").value = db.logoSize||36;
+    document.getElementById("gSizeVal").textContent = (db.logoSize||36)+"px";
+    updateTopbarLogo(db.logo, db.logoSize||36);
+    if (activeId) showLeagueAdmin(activeId);
+  } else {
+    document.getElementById("loginErr").style.display = "block";
+  }
+}
+function doLogout() {
+  isAdmin = false;
+  document.getElementById("adminBar").classList.remove("open");
+  document.getElementById("adminBtn").style.display = "";
+  document.getElementById("logoutBtn").style.display = "none";
+  document.getElementById("leagueAdminRow").style.display = "none";
+}
+
+/* ══════════════════════════════════════════════
+   ADMIN — LEAGUE CONTROLS
+══════════════════════════════════════════════ */
+function showLeagueAdmin(id) {
+  const l = leagues.find(x=>x.id===id);
+  if (!l) return;
+  const displayName = db.leagueNames[id] || l.rawName;
+  document.getElementById("leagueAdminRow").style.display = "";
+  document.getElementById("adminLeagueName").textContent  = displayName;
+  document.getElementById("lName").value     = displayName;
+  document.getElementById("lLogoUrl").value  = db.leagueLogos[id]||"";
+  const sz = db.leagueLogoSizes[id]||64;
+  document.getElementById("lLogoSize").value = sz;
+  document.getElementById("lSizeVal").textContent = sz+"px";
+}
+
+/* ══════════════════════════════════════════════
+   ADMIN — SAVE
+══════════════════════════════════════════════ */
+async function saveGlobal() {
+  db.logo     = document.getElementById("gLogoUrl").value.trim();
+  db.logoSize = +document.getElementById("gLogoSize").value;
+  updateTopbarLogo(db.logo, db.logoSize);
+  await writeDB();
+  if (activeId) renderBoard(activeId);
+  renderGrid();
+}
+
+async function saveLeague() {
+  if (!activeId) return;
+  const name = document.getElementById("lName").value.trim();
+  const logo  = document.getElementById("lLogoUrl").value.trim();
+  const sz    = +document.getElementById("lLogoSize").value;
+  if (name) db.leagueNames[activeId] = name;
+  db.leagueLogos[activeId]     = logo;
+  db.leagueLogoSizes[activeId] = sz;
+  await writeDB();
+  buildLeagues();
+  renderGrid();
+  if (activeId) { showLeagueAdmin(activeId); renderBoard(activeId); }
+}
+
+/* ══════════════════════════════════════════════
+   UTIL
+══════════════════════════════════════════════ */
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+/* ══════════════════════════════════════════════
+   EVENTS & INIT
+══════════════════════════════════════════════ */
+document.getElementById("adminPw").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+document.getElementById("overlay").addEventListener("click", e => { if(e.target===document.getElementById("overlay")) closeModal(); });
+
+renderGridSkeleton();
+fetchDB();
+setInterval(fetchDB, 30000);
+
+document.getElementById("footDate").textContent =
+  new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+</script>
+</body>
+</html>
